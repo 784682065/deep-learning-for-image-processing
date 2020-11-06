@@ -8,6 +8,7 @@ import torch
 import time
 import matplotlib.pyplot as plt
 
+# 由于我第四张显卡有点问题不能同时并行,所以我手动设置了只可见前三张显卡
 os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
