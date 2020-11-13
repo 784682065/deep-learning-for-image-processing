@@ -8,6 +8,12 @@ import os
 import torch.optim as optim
 from model import GoogLeNet
 
+# device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+# print(device)
+
+# 由于我第四张显卡有点问题不能同时并行,所以我手动设置了只可见前三张显卡
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
+
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -60,6 +66,12 @@ validate_loader = torch.utils.data.DataLoader(validate_dataset,
 # model_dict.update(pretrain_dict)
 # net.load_state_dict(model_dict)
 net = GoogLeNet(num_classes=5, aux_logits=True, init_weights=True)
+
+if torch.cuda.device_count() > 1:
+  print("Let's use", torch.cuda.device_count(), "GPUs!")
+  # dim = 0 [30, xxx] -> [10, ...], [10, ...], [10, ...] on 3 GPUs
+  net = nn.DataParallel(net)
+
 net.to(device)
 loss_function = nn.CrossEntropyLoss()
 optimizer = optim.Adam(net.parameters(), lr=0.0003)

@@ -30,6 +30,7 @@ except Exception as e:
 model = GoogLeNet(num_classes=5, aux_logits=False)
 # load model weights
 model_weight_path = "./googleNet.pth"
+# strict = False 会是的训练出的pth 不精准匹配现在定义的GoogLeNet , 因为现在定义的不需要辅助分类器
 missing_keys, unexpected_keys = model.load_state_dict(torch.load(model_weight_path), strict=False)
 model.eval()
 with torch.no_grad():

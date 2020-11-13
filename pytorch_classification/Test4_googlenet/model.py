@@ -8,8 +8,9 @@ class GoogLeNet(nn.Module):
         super(GoogLeNet, self).__init__()
         self.aux_logits = aux_logits
 
-        self.conv1 = BasicConv2d(3, 64, kernel_size=7, stride=2, padding=3)
-        self.maxpool1 = nn.MaxPool2d(3, stride=2, ceil_mode=True)
+        self.conv1 = BasicConv2d(3, 64, kernel_size=7, stride=2,
+                                 padding=3)  # (224 -7 + 2*3) /2 +1 = 112.5 向下取整为112  [图像输入深度 - kernel_size + stride * padding] / stride +1
+        self.maxpool1 = nn.MaxPool2d(3, stride=2, ceil_mode=True)  # ceil_mode == True 向上取整.
 
         self.conv2 = BasicConv2d(64, 64, kernel_size=1)
         self.conv3 = BasicConv2d(64, 192, kernel_size=3, padding=1)
@@ -33,7 +34,7 @@ class GoogLeNet(nn.Module):
             self.aux1 = InceptionAux(512, num_classes)
             self.aux2 = InceptionAux(528, num_classes)
 
-        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1)) # 原文采用averagePool 7*7 +1 单纯的对输入图像224的有效果, 这里使用AdaptiveAvgPool2d 对任何分辨率的图像都能变成高为1宽为1的矩阵
         self.dropout = nn.Dropout(0.4)
         self.fc = nn.Linear(1024, num_classes)
         if init_weights:
@@ -60,7 +61,7 @@ class GoogLeNet(nn.Module):
         # N x 480 x 14 x 14
         x = self.inception4a(x)
         # N x 512 x 14 x 14
-        if self.training and self.aux_logits:    # eval model lose this layer
+        if self.training and self.aux_logits:  # eval model lose this layer
             aux1 = self.aux1(x)
 
         x = self.inception4b(x)
@@ -69,7 +70,7 @@ class GoogLeNet(nn.Module):
         # N x 512 x 14 x 14
         x = self.inception4d(x)
         # N x 528 x 14 x 14
-        if self.training and self.aux_logits:    # eval model lose this layer
+        if self.training and self.aux_logits:  # eval model lose this layer
             aux2 = self.aux2(x)
 
         x = self.inception4e(x)
@@ -88,7 +89,7 @@ class GoogLeNet(nn.Module):
         x = self.dropout(x)
         x = self.fc(x)
         # N x 1000 (num_classes)
-        if self.training and self.aux_logits:   # eval model lose this layer
+        if self.training and self.aux_logits:  # eval model lose this layer
             return x, aux2, aux1
         return x
 
@@ -111,12 +112,14 @@ class Inception(nn.Module):
 
         self.branch2 = nn.Sequential(
             BasicConv2d(in_channels, ch3x3red, kernel_size=1),
-            BasicConv2d(ch3x3red, ch3x3, kernel_size=3, padding=1)   # 保证输出大小等于输入大小
+            BasicConv2d(ch3x3red, ch3x3, kernel_size=3, padding=1)
+            # 保证输出大小等于输入大小 , outputsize = (inputsize - 3 +2*1)/1  +1 = inputsize
         )
 
         self.branch3 = nn.Sequential(
             BasicConv2d(in_channels, ch5x5red, kernel_size=1),
-            BasicConv2d(ch5x5red, ch5x5, kernel_size=5, padding=2)   # 保证输出大小等于输入大小
+            BasicConv2d(ch5x5red, ch5x5, kernel_size=5, padding=2)
+            # 保证输出大小等于输入大小 , outputsize = (inputsize - 5 +2*2)/1  +1 = inputsize
         )
 
         self.branch4 = nn.Sequential(
@@ -131,7 +134,7 @@ class Inception(nn.Module):
         branch4 = self.branch4(x)
 
         outputs = [branch1, branch2, branch3, branch4]
-        return torch.cat(outputs, 1)
+        return torch.cat(outputs, 1)  # 使用torch.cat 对四个分支进行合并.  宽度 深度 高度 ,所以索引值1 为在深度channels上进行合并
 
 
 class InceptionAux(nn.Module):
@@ -149,7 +152,7 @@ class InceptionAux(nn.Module):
         # aux1: N x 512 x 4 x 4, aux2: N x 528 x 4 x 4
         x = self.conv(x)
         # N x 128 x 4 x 4
-        x = torch.flatten(x, 1)
+        x = torch.flatten(x, 1)  # 从channel 进行展平特征矩阵
         x = F.dropout(x, 0.5, training=self.training)
         # N x 2048
         x = F.relu(self.fc1(x), inplace=True)
