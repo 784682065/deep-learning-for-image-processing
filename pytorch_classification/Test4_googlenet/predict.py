@@ -1,5 +1,5 @@
 import torch
-from model import GoogLeNet
+from pytorch_classification.Test4_googlenet.model import GoogLeNet
 from PIL import Image
 from torchvision import transforms
 import matplotlib.pyplot as plt
@@ -11,7 +11,7 @@ data_transform = transforms.Compose(
      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
 
 # load image
-img = Image.open("../tulip.jpg")
+img = Image.open("../test-tulip.jpg")
 plt.imshow(img)
 # [N, C, H, W]
 img = data_transform(img)

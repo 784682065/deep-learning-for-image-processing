@@ -9,7 +9,7 @@ class GoogLeNet(nn.Module):
         self.aux_logits = aux_logits
 
         self.conv1 = BasicConv2d(3, 64, kernel_size=7, stride=2,
-                                 padding=3)  # (224 -7 + 2*3) /2 +1 = 112.5 向下取整为112  [图像输入深度 - kernel_size + stride * padding] / stride +1
+                                 padding=3)  # (224 -7 + 2*3) /2 +1 = 112.5 向下取整为112  [图像输入深度 - kernel_size + 2 * padding] / stride +1
         self.maxpool1 = nn.MaxPool2d(3, stride=2, ceil_mode=True)  # ceil_mode == True 向上取整.
 
         self.conv2 = BasicConv2d(64, 64, kernel_size=1)

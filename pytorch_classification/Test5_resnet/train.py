@@ -7,7 +7,7 @@ import os
 import torch.optim as optim
 from model import resnet34, resnet101
 
-
+os.environ['CUDA_VISIBLE_DEVICES'] = '0,1,2'
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 print(device)
 
@@ -22,7 +22,7 @@ data_transform = {
                                transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])])}
 
 
-data_root = os.path.abspath(os.path.join(os.getcwd(), "../.."))  # get data root path
+data_root = os.path.abspath(os.path.join(os.getcwd(), "../../../../.."))  # get data root path
 image_path = data_root + "/data_set/flower_data/"  # flower data set path
 
 train_dataset = datasets.ImageFolder(root=image_path+"train",
@@ -37,17 +37,17 @@ json_str = json.dumps(cla_dict, indent=4)
 with open('class_indices.json', 'w') as json_file:
     json_file.write(json_str)
 
-batch_size = 16
+batch_size = 256
 train_loader = torch.utils.data.DataLoader(train_dataset,
                                            batch_size=batch_size, shuffle=True,
-                                           num_workers=0)
+                                           num_workers=16)
 
 validate_dataset = datasets.ImageFolder(root=image_path + "val",
                                         transform=data_transform["val"])
 val_num = len(validate_dataset)
 validate_loader = torch.utils.data.DataLoader(validate_dataset,
                                               batch_size=batch_size, shuffle=False,
-                                              num_workers=0)
+                                              num_workers=16)
 
 net = resnet34()
 # load pretrain weights
@@ -56,8 +56,15 @@ missing_keys, unexpected_keys = net.load_state_dict(torch.load(model_weight_path
 # for param in net.parameters():
 #     param.requires_grad = False
 # change fc layer structure
+"""
+迁移学习   net.fc = nn.Linear(inchannel, 5)
+修改最后一层Linear层
+"""
 inchannel = net.fc.in_features
 net.fc = nn.Linear(inchannel, 5)
+if torch.cuda.device_count()>1:
+        print("Let's use", torch.cuda.device_count(),"GPUs!" )
+        net = nn.DataParallel(net)
 net.to(device)
 
 loss_function = nn.CrossEntropyLoss()

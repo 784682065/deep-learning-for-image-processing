@@ -8,7 +8,7 @@ class BasicBlock(nn.Module):
     def __init__(self, in_channel, out_channel, stride=1, downsample=None):
         super(BasicBlock, self).__init__()
         self.conv1 = nn.Conv2d(in_channels=in_channel, out_channels=out_channel,
-                               kernel_size=3, stride=stride, padding=1, bias=False)
+                               kernel_size=3, stride=stride, padding=1, bias=False)  # BN 不需要bias
         self.bn1 = nn.BatchNorm2d(out_channel)
         self.relu = nn.ReLU()
         self.conv2 = nn.Conv2d(in_channels=out_channel, out_channels=out_channel,
@@ -18,6 +18,7 @@ class BasicBlock(nn.Module):
 
     def forward(self, x):
         identity = x
+        # 残差结构 过shortcut 的时候看看需不需要 改变shape
         if self.downsample is not None:
             identity = self.downsample(x)
 
@@ -35,6 +36,7 @@ class BasicBlock(nn.Module):
 
 
 class Bottleneck(nn.Module):
+    # 50 层以上的残差结构 需要expansion =4 , 在CONV2_ 结构中 50层以下的是64 channel, 50层以上的 256
     expansion = 4
 
     def __init__(self, in_channel, out_channel, stride=1, downsample=None):
@@ -78,6 +80,13 @@ class Bottleneck(nn.Module):
 class ResNet(nn.Module):
 
     def __init__(self, block, blocks_num, num_classes=1000, include_top=True):
+        """
+        Args:
+            block:  32层用BasicBlock, 以上用Bottleneck
+            blocks_num: 数组, 比如32层就是 3,4,6,3 分别对应conv2_x 到conv4_x 各个卷积层的个数
+            num_classes: 分类数量
+            include_top: 方便以后拓展网络
+        """
         super(ResNet, self).__init__()
         self.include_top = include_top
         self.in_channel = 64
@@ -88,7 +97,7 @@ class ResNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
         self.layer1 = self._make_layer(block, 64, blocks_num[0])
-        self.layer2 = self._make_layer(block, 128, blocks_num[1], stride=2)
+        self.layer2 = self._make_layer(block, 128, blocks_num[1], stride=2) # 这里stride 为2 是的make_layer 长和宽变为一半, 深度变成两倍
         self.layer3 = self._make_layer(block, 256, blocks_num[2], stride=2)
         self.layer4 = self._make_layer(block, 512, blocks_num[3], stride=2)
         if self.include_top:
@@ -102,6 +111,8 @@ class ResNet(nn.Module):
     def _make_layer(self, block, channel, block_num, stride=1):
         downsample = None
         if stride != 1 or self.in_channel != channel * block.expansion:
+            # 如果是32层以上的, conv2_x --> conv5_x 都是需要改变深度的变为4倍, 并且conv2_x 与其他的三个不一样
+            # conv2_x 不需要变长和宽变为一半, conv3 --> 5  则需要把宽度和高度也变为一半, 因此stride=stride 需要stride 来调整
             downsample = nn.Sequential(
                 nn.Conv2d(self.in_channel, channel * block.expansion, kernel_size=1, stride=stride, bias=False),
                 nn.BatchNorm2d(channel * block.expansion))
